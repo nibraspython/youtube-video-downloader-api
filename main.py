@@ -42,30 +42,6 @@ def home():
 def ping():
     return jsonify({"message": "API is alive!"}), 200
 
-@app.route('/pvtyt', methods=['GET', 'POST'])
-def download_youtube_video():
-    if request.method == 'POST':
-        data = request.get_json()
-        url = data.get('url')
-        resolution = data.get('resolution', '360p')  # Default to 360p
-
-    elif request.method == 'GET':
-        url = request.args.get('url')
-        resolution = request.args.get('resolution', '360p')  # Get resolution from URL params
-
-    if not url:
-        return jsonify({"error": "Missing 'url' parameter."}), 400
-
-    if not is_valid_youtube_url(url):
-        return jsonify({"error": "Invalid YouTube URL."}), 400
-    
-    video_url, error_message = get_video_url(url, resolution)
-    
-    if video_url:
-        return jsonify({"download_url": video_url}), 200
-    else:
-        return jsonify({"error": error_message}), 500
-
 @app.route('/download/<resolution>', methods=['POST'])
 def download_by_resolution(resolution):
     data = request.get_json()
