@@ -7,17 +7,19 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend requests
 
 def get_video_url(url, resolution):
+    """Fetch YouTube video URL with the specified resolution."""
     try:
         yt = YouTube(url)
         stream = yt.streams.filter(progressive=True, file_extension='mp4', resolution=resolution).first()
         if stream:
-            return stream.url, None  # Return direct download URL
+            return stream.url, None
         else:
             return None, "Video with the specified resolution not found."
     except Exception as e:
-        return None, str(e)
+        return None, f"Error: {str(e)}"
 
 def get_video_info(url):
+    """Fetch YouTube video metadata."""
     try:
         yt = YouTube(url)
         video_info = {
@@ -26,14 +28,14 @@ def get_video_info(url):
             "length": yt.length,
             "views": yt.views,
             "description": yt.description,
-            "publish_date": yt.publish_date.strftime("%Y-%m-%d"),
-            "thumbnail": yt.thumbnail_url
+            "publish_date": yt.publish_date.strftime("%Y-%m-%d") if yt.publish_date else "Unknown",
         }
         return video_info, None
     except Exception as e:
-        return None, str(e)
+        return None, f"Error: {str(e)}"
 
 def is_valid_youtube_url(url):
+    """Validate YouTube URL format."""
     pattern = r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+"
     return re.match(pattern, url) is not None
 
@@ -46,9 +48,10 @@ def ping():
     return jsonify({"message": "API is alive!"}), 200
 
 @app.route('/pvtyt', methods=['GET'])
-def download_youtube_video():
+def download_video():
+    """Handle video download request with GET method."""
     url = request.args.get('url')
-    resolution = request.args.get('resolution', '360p')
+    resolution = request.args.get('format', '360p')  # Default resolution 360p
 
     if not url:
         return jsonify({"error": "Missing 'url' parameter."}), 400
@@ -65,6 +68,7 @@ def download_youtube_video():
 
 @app.route('/video_info', methods=['GET'])
 def video_info():
+    """Handle video info request with GET method."""
     url = request.args.get('url')
 
     if not url:
