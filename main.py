@@ -6,23 +6,34 @@ import time
 
 app = Flask(__name__)
 
-# Free proxy list (Update with fresh proxies)
+# List of working proxies (Replace with fresh proxies)
 PROXIES = [
-    "http://138.201.132.168:3128",
-    "http://95.216.65.69:3128",
-    "http://103.155.54.26:8080",
-    "http://89.58.12.202:3128"
+    "138.201.132.168:3128",
+    "95.216.65.69:3128",
+    "103.155.54.26:8080",
+    "89.58.12.202:3128"
 ]
 
 def get_random_proxy():
     """Returns a random proxy from the list"""
-    return {"http": random.choice(PROXIES), "https": random.choice(PROXIES)}
+    proxy = random.choice(PROXIES)
+    return {"http": f"http://{proxy}", "https": f"https://{proxy}"}
 
 def get_video_url(url, resolution):
     try:
         time.sleep(random.uniform(1, 3))  # Random delay to avoid detection
 
-        yt = YouTube(url)
+        proxy = get_random_proxy()  # Get a proxy
+
+        # Make a request through the proxy to check if it works
+        try:
+            response = requests.get("https://www.youtube.com", proxies=proxy, timeout=5)
+            if response.status_code != 200:
+                return None, "Proxy failed, try again."
+        except requests.exceptions.RequestException:
+            return None, "Proxy connection error, try again."
+
+        yt = YouTube(url, proxies=proxy)  # Use proxy for pytube
         stream = yt.streams.filter(progressive=True, file_extension='mp4', resolution=resolution).first()
 
         if stream:
@@ -40,17 +51,6 @@ def download_video():
 
     if not url:
         return jsonify({"error": "Missing 'url' parameter."}), 400
-
-    proxy = get_random_proxy()
-
-    try:
-        # Send request through proxy
-        response = requests.get(url, proxies=proxy, timeout=5)
-        if response.status_code != 200:
-            return jsonify({"error": "Proxy failed, try again."}), 500
-
-    except requests.exceptions.RequestException:
-        return jsonify({"error": "Proxy connection error, try again."}), 500
 
     video_url, error_message = get_video_url(url, resolution)
 
