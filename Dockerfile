@@ -16,5 +16,5 @@ COPY . /app
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Run the app using Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the app using Gunicorn (Flask needs WSGI, not ASGI)
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "main:app"]
