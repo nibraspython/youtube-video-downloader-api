@@ -34,6 +34,10 @@ def is_valid_youtube_url(url):
     pattern = r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+"
     return re.match(pattern, url) is not None
 
+@app.route('/')
+def home():
+    return jsonify({'message': 'YouTube Downloader API is running!'}), 200
+    
 @app.route('/ping', methods=['GET'])
 def ping():
     return jsonify({"message": "API is alive!"}), 200
@@ -56,7 +60,7 @@ def download_by_resolution(resolution):
     else:
         return jsonify({"error": error_message}), 500
 
-@app.route('/video_info', methods=['POST'])
+@app.route('/video_info', methods=['GET'])
 def video_info():
     data = request.get_json()
     url = data.get('url')
