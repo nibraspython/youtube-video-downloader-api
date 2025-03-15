@@ -1,15 +1,17 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from pytube import YouTube
 import re
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for frontend requests
 
 def get_video_url(url, resolution):
     try:
         yt = YouTube(url)
         stream = yt.streams.filter(progressive=True, file_extension='mp4', resolution=resolution).first()
         if stream:
-            return stream.url, None  # Return direct URL instead of downloading
+            return stream.url, None  # Return direct download URL
         else:
             return None, "Video with the specified resolution not found."
     except Exception as e:
@@ -24,7 +26,8 @@ def get_video_info(url):
             "length": yt.length,
             "views": yt.views,
             "description": yt.description,
-            "publish_date": yt.publish_date,
+            "publish_date": yt.publish_date.strftime("%Y-%m-%d"),
+            "thumbnail": yt.thumbnail_url
         }
         return video_info, None
     except Exception as e:
@@ -42,37 +45,36 @@ def home():
 def ping():
     return jsonify({"message": "API is alive!"}), 200
 
-@app.route('/download/<resolution>', methods=['POST'])
-def download_by_resolution(resolution):
-    data = request.get_json()
-    url = data.get('url')
-    
+@app.route('/pvtyt', methods=['GET'])
+def download_youtube_video():
+    url = request.args.get('url')
+    resolution = request.args.get('resolution', '360p')
+
     if not url:
-        return jsonify({"error": "Missing 'url' parameter in the request body."}), 400
+        return jsonify({"error": "Missing 'url' parameter."}), 400
 
     if not is_valid_youtube_url(url):
         return jsonify({"error": "Invalid YouTube URL."}), 400
-    
+
     video_url, error_message = get_video_url(url, resolution)
-    
+
     if video_url:
         return jsonify({"download_url": video_url}), 200
     else:
         return jsonify({"error": error_message}), 500
 
-@app.route('/video_info', methods=['POST'])
+@app.route('/video_info', methods=['GET'])
 def video_info():
-    data = request.get_json()
-    url = data.get('url')
-    
+    url = request.args.get('url')
+
     if not url:
-        return jsonify({"error": "Missing 'url' parameter in the request body."}), 400
+        return jsonify({"error": "Missing 'url' parameter."}), 400
 
     if not is_valid_youtube_url(url):
         return jsonify({"error": "Invalid YouTube URL."}), 400
-    
+
     video_info, error_message = get_video_info(url)
-    
+
     if video_info:
         return jsonify(video_info), 200
     else:
