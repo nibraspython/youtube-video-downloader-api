@@ -1,26 +1,29 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 from pytube import YouTube
 import re
+import random
+import requests
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend requests
 
-def get_video_url(url, resolution):
-    """Fetch YouTube video URL with the specified resolution."""
-    try:
-        yt = YouTube(url)
-        stream = yt.streams.filter(progressive=True, file_extension='mp4', resolution=resolution).first()
-        if stream:
-            return stream.url, None
-        else:
-            return None, "Video with the specified resolution not found."
-    except Exception as e:
-        return None, f"Error: {str(e)}"
+# List of free proxies (update regularly)
+PROXIES = [
+    "http://138.201.132.168:3128",
+    "http://95.216.65.69:3128",
+    "http://103.155.54.26:8080",
+    "http://89.58.12.202:3128"
+]
+
+def get_random_proxy():
+    """Returns a random proxy from the list"""
+    proxy = random.choice(PROXIES)
+    return {"http": proxy, "https": proxy}
 
 def get_video_info(url):
-    """Fetch YouTube video metadata."""
     try:
+        proxy = get_random_proxy()
+        response = requests.get(url, proxies=proxy, timeout=5)  # Test proxy
+        
         yt = YouTube(url)
         video_info = {
             "title": yt.title,
@@ -28,47 +31,18 @@ def get_video_info(url):
             "length": yt.length,
             "views": yt.views,
             "description": yt.description,
-            "publish_date": yt.publish_date.strftime("%Y-%m-%d") if yt.publish_date else "Unknown",
+            "publish_date": str(yt.publish_date),
         }
         return video_info, None
     except Exception as e:
-        return None, f"Error: {str(e)}"
+        return None, str(e)
 
 def is_valid_youtube_url(url):
-    """Validate YouTube URL format."""
     pattern = r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+"
     return re.match(pattern, url) is not None
 
-@app.route('/')
-def home():
-    return jsonify({'message': 'YouTube Downloader API is running!'}), 200
-
-@app.route('/ping', methods=['GET'])
-def ping():
-    return jsonify({"message": "API is alive!"}), 200
-
-@app.route('/pvtyt', methods=['GET'])
-def download_video():
-    """Handle video download request with GET method."""
-    url = request.args.get('url')
-    resolution = request.args.get('format', '360p')  # Default resolution 360p
-
-    if not url:
-        return jsonify({"error": "Missing 'url' parameter."}), 400
-
-    if not is_valid_youtube_url(url):
-        return jsonify({"error": "Invalid YouTube URL."}), 400
-
-    video_url, error_message = get_video_url(url, resolution)
-
-    if video_url:
-        return jsonify({"download_url": video_url}), 200
-    else:
-        return jsonify({"error": error_message}), 500
-
 @app.route('/video_info', methods=['GET'])
 def video_info():
-    """Handle video info request with GET method."""
     url = request.args.get('url')
 
     if not url:
