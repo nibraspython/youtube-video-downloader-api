@@ -1,14 +1,20 @@
-# Use the official Python image as the base image
-FROM python:3.8
+# Use the official Python image
+FROM python:3.9-slim
 
-# Set the working directory in the container
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the application files into the working directory
+# Copy requirements.txt first to leverage Docker caching
+COPY requirements.txt /app/requirements.txt
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application
 COPY . /app
 
-# Install the application dependencies
-RUN pip install -r requirements.txt
+# Expose the port the app runs on
+EXPOSE 8000
 
-# Define the entry point for the container
-CMD ["flask", "run", "--host=0.0.0.0"]
+# Run the app using Uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
