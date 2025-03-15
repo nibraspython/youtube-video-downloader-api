@@ -3,6 +3,7 @@ from pytube import YouTube
 import re
 import random
 import requests
+from requests.exceptions import ProxyError, ConnectTimeout
 
 app = Flask(__name__)
 
@@ -22,7 +23,7 @@ def get_random_proxy():
 def get_video_info(url):
     try:
         proxy = get_random_proxy()
-        response = requests.get(url, proxies=proxy, timeout=5)  # Test proxy
+        response = requests.get(url, proxies=proxy, timeout=10)  # Increased timeout
         
         yt = YouTube(url)
         video_info = {
@@ -34,8 +35,10 @@ def get_video_info(url):
             "publish_date": str(yt.publish_date),
         }
         return video_info, None
+    except (ProxyError, ConnectTimeout) as e:
+        return None, f"Proxy error or connection timeout: {str(e)}"
     except Exception as e:
-        return None, str(e)
+        return None, f"Error: {str(e)}"
 
 def is_valid_youtube_url(url):
     pattern = r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+"
